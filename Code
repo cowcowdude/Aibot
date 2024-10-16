@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Voice Assistant</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #2C2C2E; /* Dark background */
+            color: white;
+            padding: 50px;
+            height: 100vh; /* Full height */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 36px;
+            margin-bottom: 20px;
+        }
+
+        #voice-assistant {
+            background-color: #3A3A3C; /* Assistant background */
+            border-radius: 15px; /* Rounded corners */
+            padding: 30px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            width: 300px; /* Fixed width */
+        }
+
+        button {
+            background-color: #007AFF; /* Blue button */
+            color: white;
+            border: none;
+            border-radius: 25px; /* Rounded button */
+            padding: 10px 20px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #0051CC; /* Darker blue on hover */
+        }
+
+        #response {
+            margin-top: 20px;
+            font-size: 20px;
+            line-height: 1.5;
+        }
+
+        .assistant-message {
+            margin: 10px 0;
+            background-color: #4A4A4C; /* Assistant message background */
+            border-radius: 10px;
+            padding: 10px;
+            display: inline-block;
+            max-width: 80%;
+            word-wrap: break-word; /* Break long words */
+        }
+
+        .user-message {
+            margin: 10px 0;
+            background-color: #007AFF; /* User message background */
+            border-radius: 10px;
+            padding: 10px;
+            display: inline-block;
+            color: white;
+            max-width: 80%;
+            word-wrap: break-word; /* Break long words */
+            align-self: flex-end; /* Align user message to the right */
+        }
+    </style>
+</head>
+<body>
+    <div id="voice-assistant">
+        <h1>Smart Voice Assistant</h1>
+        <button id="start-button">Start Listening</button>
+        <div id="response"></div>
+    </div>
+
+    <script>
+        const responseDiv = document.getElementById('response');
+        const startButton = document.getElementById('start-button');
+
+        // Speech recognition setup
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+
+        recognition.onstart = () => {
+            console.log('Voice recognition started. Speak into the microphone.');
+            responseDiv.innerHTML = "<div class='assistant-message'>Listening...</div>";
+        };
+
+        recognition.onresult = async (event) => {
+            const transcript = event.results[0][0].transcript;
+            console.log('You said: ', transcript);
+            responseDiv.innerHTML += "<div class='user-message'>You said: " + transcript + "</div>";
+            await getAIResponse(transcript);
+        };
+
+        recognition.onerror = (event) => {
+            console.error('Error occurred in recognition: ', event.error);
+            responseDiv.innerHTML += "<div class='assistant-message'>Error: " + event.error + "</div>";
+        };
+
+        recognition.onend = () => {
+            console.log('Voice recognition ended.');
+            responseDiv.innerHTML += "<div class='assistant-message'>Listening ended.</div>";
+        };
+
+        startButton.addEventListener('click', () => {
+            responseDiv.innerHTML = ""; // Clear previous responses
+            recognition.start();
+        });
+
+        async function getAIResponse(userInput) {
+            const apiKey = 'sk-vjfDmmYfX8exph8G7Cjd-1FkJMC5FfLhd3pPV17g_2T3BlbkFJFV62doMU2hHRubV_RJrRJvPuz7CyMcjyDfyKzwHyMA'; // Replace with your OpenAI API key
+            const endpoint = 'https://api.openai.com/v1/chat/completions';
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'gpt-3.5-turbo',
+                        messages: [{ role: 'user', content: userInput }]
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                const aiMessage = data.choices[0].message.content;
+                speak(aiMessage);
+                responseDiv.innerHTML += "<div class='assistant-message'>Assistant: " + aiMessage + "</div>";
+            } catch (error) {
+                console.error('Error fetching AI response: ', error);
+                responseDiv.innerHTML += "<div class='assistant-message'>Error fetching AI response.</div>";
+            }
+        }
+
+        function speak(text) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            window.speechSynthesis.speak(utterance);
+        }
+    </script>
+</body>
+</html>
